@@ -158,31 +158,25 @@ if __name__ == "__main__":
     usageTokens: 'Usage 38K tok',
     duration: 'Ran for 1m 15s',
   },
+];
 
-  // Turn 3
-  {
-    id: 'msg-5',
-    sender: 'user',
-    timestamp: '9/9 14:38',
-    content: 'can you run it',
-  },
-  {
-    id: 'msg-6',
-    sender: 'assistant',
-    timestamp: '9/9 14:38',
-    content: `Done ✅ Created and tested it in your folder:
+export const TURN_3_RESPONSE: Message = {
+  id: 'msg-6',
+  sender: 'assistant',
+  timestamp: '9/9 14:38',
+  content: `Done ✅ Created and tested it in your folder:
 
 • File: \`search_tree.py\` at \`/Users/waldo/Documents/AnonymousData/\`
 • Test run ( \`python3 search_tree.py . "*.py"\` ) worked — it found the 1 Python file in the folder.
 
 Run it with:`,
-    toolCallsSummary: '2 tool calls',
-    toolCalls: [
-      {
-        id: 'tc-1',
-        type: 'think',
-        title: 'The user wants to create a file in "this folder" — the working directory is /Users/waldo/Documents/AnonymousData. Let me create search_tree.py with robust pattern filtering and safety limits.',
-        reasoningFull: `### Strategic Objective
+  toolCallsSummary: '2 tool calls',
+  toolCalls: [
+    {
+      id: 'tc-1',
+      type: 'think',
+      title: 'The user wants to create a file in "this folder" — the working directory is /Users/waldo/Documents/AnonymousData. Let me create search_tree.py with robust pattern filtering and safety limits.',
+      reasoningFull: `### Strategic Objective
 The user requested a Python tree search utility inside the current active workspace (/Users/waldo/Documents/AnonymousData).
 
 ### Planning & Architecture
@@ -195,21 +189,21 @@ The user requested a Python tree search utility inside the current active worksp
 - Verify target path exists
 - Write search_tree.py with 89 lines of clean formatted code
 - Execute test run to confirm execution and non-zero discovery`,
-        isGenerating: false,
-      },
-      {
-        id: 'tc-2',
-        type: 'write',
-        title: 'search_tree.py',
-        detail: '/Users/waldo/Documents/AnonymousData/search_tree.py',
-        linesAdded: 89,
-        linesRemoved: 0,
-      },
-      {
-        id: 'tc-3',
-        type: 'think',
-        title: "The file has been created. Let's do a quick test to check if it works.",
-        reasoningFull: `### Verification Step
+      isGenerating: false,
+    },
+    {
+      id: 'tc-2',
+      type: 'write',
+      title: 'search_tree.py',
+      detail: '/Users/waldo/Documents/AnonymousData/search_tree.py',
+      linesAdded: 89,
+      linesRemoved: 0,
+    },
+    {
+      id: 'tc-3',
+      type: 'think',
+      title: "The file has been created. Let's do a quick test to check if it works.",
+      reasoningFull: `### Verification Step
 The file write completed successfully with status 200 (89 lines created).
 Now triggering a local shell execution test using:
 \`python3 search_tree.py . "*.py"\`
@@ -218,76 +212,69 @@ Goals:
 - Ensure no SyntaxError or indentation issues in Python 3 runtime
 - Verify output formatting conforms to standard CLI terminal specifications
 - Check exit code is 0`,
-        isGenerating: false,
-      },
-      {
-        id: 'tc-4',
-        type: 'bash',
-        title: 'Test the search script on the current folder',
-        command: 'python3 search_tree.py . "*.py"',
-        output: `Scanning '.' for pattern: '*.py'...
+      isGenerating: false,
+    },
+    {
+      id: 'tc-4',
+      type: 'bash',
+      title: 'Test the search script on the current folder',
+      command: 'python3 search_tree.py . "*.py"',
+      output: `Scanning '.' for pattern: '*.py'...
 ├── 📄 search_tree.py (3.4 KB)
 Done scanning.`,
-        executionTime: '0.42s',
-      },
-      {
-        id: 'tc-5',
-        type: 'think',
-        title: 'The script works. It detected the file itself. Let me communicate this to the user.',
-        reasoningFull: `### Final Synthesis
+      executionTime: '0.42s',
+    },
+    {
+      id: 'tc-5',
+      type: 'think',
+      title: 'The script works. It detected the file itself. Let me communicate this to the user.',
+      reasoningFull: `### Final Synthesis
 The test run output verified that the Python script correctly located \`search_tree.py\` in the folder and exited cleanly.
 Preparing the response for the developer:
 1. State creation and verification success.
 2. Provide quick reference path and CLI commands for immediate execution.
 3. Attach produced file reference.`,
-        isGenerating: false,
-      },
-    ],
-    codeSnippets: [
-      {
-        lang: 'bash',
-        code: `cd /Users/waldo/Documents/AnonymousData
+      isGenerating: false,
+    },
+  ],
+  codeSnippets: [
+    {
+      lang: 'bash',
+      code: `cd /Users/waldo/Documents/AnonymousData
 python3 search_tree.py .         # list everything
 python3 search_tree.py . "*.py"  # filter by pattern
 python3 search_tree.py . "report" # substring match`,
-      },
-    ],
-    producedFiles: [INITIAL_PRODUCED_FILE],
-    usageTokens: 'Usage 44K tok',
-    duration: 'Ran for 2m 50s',
-    turnUsageDetails: {
-      totalTokens: '43,965 tok',
-      model: 'ollama/qwen3.8-27b-a100-80g',
-      uncachedInput: '42,926 tok',
-      output: '1,039 tok',
     },
-    turnTimeDetails: {
-      totalRunTime: '2m 50s',
-    },
-    reaction: null,
+  ],
+  producedFiles: [INITIAL_PRODUCED_FILE],
+  usageTokens: 'Usage 44K tok',
+  duration: 'Ran for 2m 50s',
+  turnUsageDetails: {
+    totalTokens: '43,965 tok',
+    model: 'ollama/qwen3.8-27b-a100-80g',
+    uncachedInput: '42,926 tok',
+    output: '1,039 tok',
   },
+  turnTimeDetails: {
+    totalRunTime: '2m 50s',
+  },
+  reaction: null,
+};
 
-  // Turn 4
-  {
-    id: 'msg-7',
-    sender: 'user',
-    timestamp: '9/9 14:38',
-    content: 'can you run it',
-  },
-  {
-    id: 'msg-8',
-    sender: 'assistant',
-    timestamp: '9/9 14:39',
-    content: 'Ran successfully. Your folder contains a lot of data',
-    toolCallsSummary: '3 tool calls · 1 message',
-    statusBadge: 'Stopped',
-    toolCalls: [
-      {
-        id: 'tc-6',
-        type: 'bash',
-        title: 'Execute search_tree.py on directory',
-        command: 'python3 search_tree.py /Users/waldo/Documents/AnonymousData',
-        output: `Scanning '/Users/waldo/Documents/AnonymousData' for pattern: '*'...
+export const TURN_4_RESPONSE: Message = {
+  id: 'msg-8',
+  sender: 'assistant',
+  timestamp: '9/9 14:39',
+  content: 'Ran successfully. Your folder contains a lot of data',
+  toolCallsSummary: '3 tool calls · 1 message',
+  statusBadge: 'Stopped',
+  toolCalls: [
+    {
+      id: 'tc-6',
+      type: 'bash',
+      title: 'Execute search_tree.py on directory',
+      command: 'python3 search_tree.py /Users/waldo/Documents/AnonymousData',
+      output: `Scanning '/Users/waldo/Documents/AnonymousData' for pattern: '*'...
 📁 Dataset_V1/
   ├── 📄 metadata.json (18.2 KB)
   ├── 📄 raw_records_2026.csv (412.8 KB)
@@ -295,34 +282,33 @@ python3 search_tree.py . "report" # substring match`,
   ├── 📄 index.db (1.2 MB)
 ├── 📄 search_tree.py (3.4 KB)
 Done scanning: 142 items indexed.`,
-        executionTime: '0.78s',
-      },
-      {
-        id: 'tc-7',
-        type: 'think',
-        title: 'Evaluating standard stdout output and exit code 0...',
-        reasoningFull: `### Output Analysis
+      executionTime: '0.78s',
+    },
+    {
+      id: 'tc-7',
+      type: 'think',
+      title: 'Evaluating standard stdout output and exit code 0...',
+      reasoningFull: `### Output Analysis
 - The command completed with returncode=0.
 - Detected subdirectories \`Dataset_V1\` and \`Cache\` alongside multiple CSV, JSON and DB artifacts.
 - Output contains 142 items. Summary is concise: "Ran successfully. Your folder contains a lot of data".`,
-        isGenerating: false,
-      },
-      {
-        id: 'tc-8',
-        type: 'bash',
-        title: 'Inspect summary count',
-        command: 'find /Users/waldo/Documents/AnonymousData -type f | wc -l',
-        output: '142',
-        executionTime: '0.12s',
-      },
-    ],
-    duration: 'Ran for 1m 40s',
-    turnTimeDetails: {
-      totalRunTime: '1m 40s',
+      isGenerating: false,
     },
-    reaction: null,
+    {
+      id: 'tc-8',
+      type: 'bash',
+      title: 'Inspect summary count',
+      command: 'find /Users/waldo/Documents/AnonymousData -type f | wc -l',
+      output: '142',
+      executionTime: '0.12s',
+    },
+  ],
+  duration: 'Ran for 1m 40s',
+  turnTimeDetails: {
+    totalRunTime: '1m 40s',
   },
-];
+  reaction: null,
+};
 
 export const INITIAL_STATS: SessionStats = {
   turns: 4,
