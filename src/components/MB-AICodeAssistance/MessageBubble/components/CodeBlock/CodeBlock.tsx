@@ -1,6 +1,6 @@
 import React from 'react';
 import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
-import { RenderCodeTokens } from '../../../utils/codeTokens';
+import { RenderCodeTokens } from '../../../../../utils/codeTokens';
 
 interface CodeBlockProps {
   lang: string;
