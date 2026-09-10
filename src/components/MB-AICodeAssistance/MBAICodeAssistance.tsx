@@ -444,13 +444,22 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
                     )}
                   </div>
 
-                  {messages.map((msg) => (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      onSelectFile={handleSelectFileInternal}
-                    />
-                  ))}
+                  {messages.map((msg, index) => {
+                    const isStartOfNewSection = index > 0 && msg.sender === 'user';
+                    return (
+                      <React.Fragment key={msg.id}>
+                        {isStartOfNewSection && (
+                          <div className="w-full my-5">
+                            <hr className="w-full border-0 border-t border-zinc-200" />
+                          </div>
+                        )}
+                        <MessageBubble
+                          message={msg}
+                          onSelectFile={handleSelectFileInternal}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
                   {isLoading && (
                     <div className="flex items-center gap-3 p-4 bg-zinc-50 border border-zinc-200/80 rounded-2xl animate-pulse text-xs text-zinc-600 max-w-md">
                       <div className="w-4 h-4 rounded-full border-2 border-[#00486b] border-t-transparent animate-spin" />
