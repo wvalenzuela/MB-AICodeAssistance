@@ -1,0 +1,6 @@
+{
+  "name": "MB-AICodeAssistance",
+  "description": "AI Chat application for real-time debugging and developer code suggestions",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
