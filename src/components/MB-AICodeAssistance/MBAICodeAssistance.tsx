@@ -414,86 +414,95 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
       {/* Main Content Area + Slide-in Workflow Panel */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         
-        {/* Left / Center: Chat or Trajectory view */}
-        <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-white">
-          {activeTab === 'chat' ? (
-            <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-              {/* Message scroll list */}
-              <div 
-                id="message-list"
-                className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6 pb-48"
-              >
-                <div className="max-w-3xl mx-auto space-y-6">
-                  {/* Collapsible System Prompt (matching UI in screenshot) */}
-                  <div className="flex flex-col items-start select-none">
-                    <button
-                      type="button"
-                      onClick={() => setIsSystemPromptOpen(!isSystemPromptOpen)}
-                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 py-1 px-2 -ml-2 rounded-md hover:bg-zinc-100 transition-colors cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-zinc-400" />
-                      <span className="font-medium">System prompt</span>
-                      <ChevronDown className={`w-3 h-3 text-zinc-400 transition-transform ${isSystemPromptOpen ? 'rotate-180' : ''}`} />
-                    </button>
+        {/* Left / Center: Chat or Trajectory view with Bottom Terminal Dock */}
+        <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-white">
+          {/* Upper content area: Chat or Trajectory view */}
+          <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
+            {activeTab === 'chat' ? (
+              <div className="flex-1 flex flex-col h-full relative overflow-hidden">
+                {/* Message scroll list with fading mask at the middle of the input chat */}
+                <div 
+                  id="message-list"
+                  className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6 pb-52 scroll-smooth"
+                  style={{
+                    maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 150px), transparent calc(100% - 65px))',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 150px), transparent calc(100% - 65px))'
+                  }}
+                >
+                  <div className="max-w-4xl xl:max-w-5xl mx-auto space-y-6">
+                    {/* Collapsible System Prompt (matching UI in screenshot) */}
+                    <div className="flex flex-col items-start select-none">
+                      <button
+                        type="button"
+                        onClick={() => setIsSystemPromptOpen(!isSystemPromptOpen)}
+                        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 py-1 px-2 -ml-2 rounded-md hover:bg-zinc-100 transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-zinc-400" />
+                        <span className="font-medium">System prompt</span>
+                        <ChevronDown className={`w-3 h-3 text-zinc-400 transition-transform ${isSystemPromptOpen ? 'rotate-180' : ''}`} />
+                      </button>
 
-                    {isSystemPromptOpen && (
-                      <div className="mt-2 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs text-zinc-600 font-mono leading-relaxed max-w-2xl animate-in fade-in zoom-in-95 duration-100">
-                        <div className="font-semibold text-zinc-800 mb-1 font-sans">Medical-Blocks AI Assistant Instructions:</div>
-                        You are Medical-Blocks AI Code Assistant, an expert biomedical and clinical data engineer embedded within the Medical-Blocks workstation environment. You have full read-write execution privileges in the current workspace (/Users/waldo/Documents/AnonymousData) and access to clinical datasets, DICOM pipelines, and container execution clusters.
+                      {isSystemPromptOpen && (
+                        <div className="mt-2 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-xl text-xs text-zinc-600 font-mono leading-relaxed max-w-2xl animate-in fade-in zoom-in-95 duration-100">
+                          <div className="font-semibold text-zinc-800 mb-1 font-sans">Medical-Blocks AI Assistant Instructions:</div>
+                          You are Medical-Blocks AI Code Assistant, an expert biomedical and clinical data engineer embedded within the Medical-Blocks workstation environment. You have full read-write execution privileges in the current workspace (/Users/waldo/Documents/AnonymousData) and access to clinical datasets, DICOM pipelines, and container execution clusters.
+                        </div>
+                      )}
+                    </div>
+
+                    {messages.map((msg, index) => {
+                      const isStartOfNewSection = index > 0 && msg.sender === 'user';
+                      return (
+                        <React.Fragment key={msg.id}>
+                          {isStartOfNewSection && (
+                            <div className="w-full my-5">
+                              <hr className="w-full border-0 border-t border-zinc-200" />
+                            </div>
+                          )}
+                          <MessageBubble
+                            message={msg}
+                            onSelectFile={handleSelectFileInternal}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                    {isLoading && (
+                      <div className="flex items-center gap-3 p-4 bg-zinc-50 border border-zinc-200/80 rounded-2xl animate-pulse text-xs text-zinc-600 max-w-md">
+                        <div className="w-4 h-4 rounded-full border-2 border-[#00486b] border-t-transparent animate-spin" />
+                        <span>Medical-Blocks AI Assistant is running task & analyzing codebase...</span>
                       </div>
                     )}
+                    <div ref={chatBottomRef} />
                   </div>
+                </div>
 
-                  {messages.map((msg, index) => {
-                    const isStartOfNewSection = index > 0 && msg.sender === 'user';
-                    return (
-                      <React.Fragment key={msg.id}>
-                        {isStartOfNewSection && (
-                          <div className="w-full my-5">
-                            <hr className="w-full border-0 border-t border-zinc-200" />
-                          </div>
-                        )}
-                        <MessageBubble
-                          message={msg}
-                          onSelectFile={handleSelectFileInternal}
-                        />
-                      </React.Fragment>
-                    );
-                  })}
-                  {isLoading && (
-                    <div className="flex items-center gap-3 p-4 bg-zinc-50 border border-zinc-200/80 rounded-2xl animate-pulse text-xs text-zinc-600 max-w-md">
-                      <div className="w-4 h-4 rounded-full border-2 border-[#00486b] border-t-transparent animate-spin" />
-                      <span>Medical-Blocks AI Assistant is running task & analyzing codebase...</span>
-                    </div>
-                  )}
-                  <div ref={chatBottomRef} />
+                {/* Floating Bottom Prompt Bar with solid/fade background occluding scrolled messages */}
+                <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
+                  {/* Backdrop gradient starting at the middle of the input chat and fading to solid white */}
+                  <div className="absolute inset-0 -top-8 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none" />
+                  <div className="relative max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-4 pointer-events-auto pb-2">
+                    <ChatInput
+                      onSendMessage={handleSendMessage}
+                      isLoading={isLoading}
+                      workspaceMode={workspaceMode}
+                      onSelectWorkspaceMode={setWorkspaceMode}
+                      selectedModel={selectedModel}
+                      onSelectModel={setSelectedModel}
+                    />
+                    <FooterStats stats={stats} />
+                  </div>
                 </div>
               </div>
-
-              {/* Floating Bottom Prompt Bar */}
-              <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none pb-2">
-                <div className="max-w-3xl mx-auto px-3 sm:px-4 pointer-events-auto">
-                  <ChatInput
-                    onSendMessage={handleSendMessage}
-                    isLoading={isLoading}
-                    workspaceMode={workspaceMode}
-                    onSelectWorkspaceMode={setWorkspaceMode}
-                    selectedModel={selectedModel}
-                    onSelectModel={setSelectedModel}
-                  />
-                  <FooterStats stats={stats} />
+            ) : (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-zinc-50/50">
+                <div className="max-w-4xl xl:max-w-5xl mx-auto">
+                  <TrajectoryView messages={messages} />
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-zinc-50/50">
-              <div className="max-w-4xl mx-auto">
-                <TrajectoryView messages={messages} />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Floating Bottom-Right Terminal Dock */}
+          {/* Bottom-Docked Terminal (VS Code / Studio style) */}
           <TerminalDock
             isOpen={isTerminalOpen}
             onToggle={() => setIsTerminalOpen(!isTerminalOpen)}
