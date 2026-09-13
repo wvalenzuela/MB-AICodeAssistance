@@ -16,7 +16,8 @@ import {
   ProducedFile, 
   SessionStats, 
   WorkspaceMode, 
-  ModelOption 
+  ModelOption,
+  TerminalPosition 
 } from '../../types';
 import { 
   INITIAL_MESSAGES, 
@@ -71,6 +72,7 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
   // Panels & Modals
   const [isWorkflowPanelOpen, setIsWorkflowPanelOpen] = useState<boolean>(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState<boolean>(false);
+  const [terminalPosition, setTerminalPosition] = useState<TerminalPosition>('bottom');
   const [selectedPreviewFile, setSelectedPreviewFile] = useState<ProducedFile | null>(null);
   const [isSessionLogOpen, setIsSessionLogOpen] = useState<boolean>(false);
   const [isSystemPromptOpen, setIsSystemPromptOpen] = useState<boolean>(false);
@@ -414,10 +416,22 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
       {/* Main Content Area + Slide-in Workflow Panel */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         
-        {/* Left / Center: Chat or Trajectory view with Bottom Terminal Dock */}
-        <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-white">
-          {/* Upper content area: Chat or Trajectory view */}
-          <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
+        {/* Left / Center: Chat or Trajectory view with Dockable Terminal */}
+        <div 
+          className={`flex-1 min-h-0 min-w-0 relative overflow-hidden bg-white ${
+            terminalPosition === 'left' || terminalPosition === 'right'
+              ? 'flex flex-row'
+              : 'flex flex-col'
+          }`}
+        >
+          {/* Main content area: Chat or Trajectory view */}
+          <div 
+            className={`flex-1 min-w-0 min-h-0 relative overflow-hidden flex flex-col ${
+              terminalPosition === 'top' || terminalPosition === 'left'
+                ? 'order-2'
+                : 'order-1'
+            }`}
+          >
             {activeTab === 'chat' ? (
               <div className="flex-1 flex flex-col h-full relative overflow-hidden">
                 {/* Message scroll list with fading mask at the middle of the input chat */}
@@ -502,10 +516,12 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
             )}
           </div>
 
-          {/* Bottom-Docked Terminal (VS Code / Studio style) */}
+          {/* Dockable Terminal (Bottom, Top, Left, Right) */}
           <TerminalDock
             isOpen={isTerminalOpen}
             onToggle={() => setIsTerminalOpen(!isTerminalOpen)}
+            position={terminalPosition}
+            onChangePosition={setTerminalPosition}
           />
         </div>
 

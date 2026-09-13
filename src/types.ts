@@ -71,6 +71,7 @@ export interface SessionStats {
 export type ActiveTab = 'chat' | 'trajectory';
 export type WorkspaceMode = 'Workspace Write' | 'Workspace Read-Only' | 'Isolated Sandbox';
 export type ModelOption = 'qwen3.8-27b-a100-80g' | 'gemini-2.5-pro' | 'gemini-2.5-flash' | 'claude-3.7-sonnet';
+export type TerminalPosition = 'bottom' | 'top' | 'left' | 'right';
 
 export interface ApprovalRequest {
   request_id: string;
