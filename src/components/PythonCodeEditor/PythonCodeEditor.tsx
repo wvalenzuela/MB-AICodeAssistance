@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Play, 
   Save, 
@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { ProducedFile } from '../../types';
+import { highlightCode, detectLanguageFromFilename } from '../../utils/syntaxHighlight';
 
 export interface PythonCodeEditorProps {
   file: ProducedFile;
@@ -52,7 +53,48 @@ export const PythonCodeEditor: React.FC<PythonCodeEditorProps> = ({
   const [editorWidth, setEditorWidth] = useState<number>(800);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Detect file language and badge label
+  const language = useMemo(() => detectLanguageFromFilename(file.name), [file.name]);
+
+  const languageBadge = useMemo(() => {
+    if (language === 'bash') return { label: 'Bash 5.2', color: 'bg-zinc-100 text-zinc-700 border-zinc-300' };
+    if (language === 'cpp') return { label: 'C++ 20', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+    if (language === 'sql') return { label: 'SQL / DuckDB', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+    if (language === 'json') return { label: 'JSON', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+    if (language === 'markdown') return { label: 'Markdown', color: 'bg-sky-50 text-sky-700 border-sky-200' };
+    return { label: 'Python 3.10', color: 'bg-blue-50 text-blue-700 border-blue-200/70' };
+  }, [language]);
+
+  // Compute syntax highlighted HTML
+  const highlightedHtml = useMemo(() => {
+    return highlightCode(code, language);
+  }, [code, language]);
+
+  // Sync scroll positions between gutter, syntax pre layer, and textarea
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (gutterRef.current) {
+      gutterRef.current.scrollTop = e.currentTarget.scrollTop;
+    }
+    if (preRef.current) {
+      preRef.current.scrollTop = e.currentTarget.scrollTop;
+      preRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
+  // Sync scroll on code changes
+  useEffect(() => {
+    if (preRef.current && textareaRef.current) {
+      preRef.current.scrollTop = textareaRef.current.scrollTop;
+      preRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+    if (gutterRef.current && textareaRef.current) {
+      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  }, [code]);
 
   // Sync code when file changes
   useEffect(() => {
@@ -190,9 +232,9 @@ export const PythonCodeEditor: React.FC<PythonCodeEditorProps> = ({
             </button>
           )}
 
-          {/* Python 3 Pill */}
-          <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-mono rounded border border-blue-200/70">
-            Python 3.10
+          {/* Language Pill */}
+          <span className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded border ${languageBadge.color}`}>
+            {languageBadge.label}
           </span>
         </div>
 
@@ -281,10 +323,13 @@ export const PythonCodeEditor: React.FC<PythonCodeEditorProps> = ({
         </div>
       </div>
 
-      {/* 2. Main Code Editor Area */}
-      <div className="flex-1 flex min-h-0 relative font-mono text-xs overflow-hidden">
+      {/* 2. Main Code Editor Area with Real-Time Syntax Highlighting */}
+      <div className="flex-1 flex min-h-0 relative font-mono text-xs overflow-hidden select-text">
         {/* Line Numbers Gutter */}
-        <div className="w-12 bg-zinc-50 border-r border-zinc-200 py-3 select-none text-right pr-3 text-zinc-400 font-mono text-xs leading-5 shrink-0 overflow-hidden">
+        <div 
+          ref={gutterRef}
+          className="w-12 bg-zinc-50 border-r border-zinc-200 py-3 select-none text-right pr-3 text-zinc-400 font-mono text-xs leading-5 shrink-0 overflow-hidden"
+        >
           {lines.map((_, i) => (
             <div key={i} className="h-5">
               {i + 1}
@@ -292,16 +337,36 @@ export const PythonCodeEditor: React.FC<PythonCodeEditorProps> = ({
           ))}
         </div>
 
-        {/* Textarea Code Input */}
+        {/* Textarea Code Input + Highlighted Underlying Token Display */}
         <div className="flex-1 relative h-full overflow-hidden bg-white">
+          {/* Layer 1: Prism Syntax Highlighted Token Display */}
+          <pre
+            ref={preRef}
+            aria-hidden="true"
+            className="absolute inset-0 m-0 p-3 font-mono text-xs leading-5 whitespace-pre overflow-hidden pointer-events-none select-none text-zinc-900 border-none bg-transparent"
+            style={{ tabSize: 4 }}
+          >
+            <code 
+              dangerouslySetInnerHTML={{ 
+                __html: (highlightedHtml || '') + (code.endsWith('\n') ? ' ' : '') 
+              }} 
+            />
+          </pre>
+
+          {/* Layer 2: Interactive Transparent Textarea */}
           <textarea
             ref={textareaRef}
             value={code}
             onChange={handleCodeChange}
             onKeyDown={handleKeyDown}
+            onScroll={handleScroll}
             spellCheck={false}
-            className="w-full h-full p-3 font-mono text-xs leading-5 text-zinc-900 bg-transparent resize-none focus:outline-hidden selection:bg-sky-100 selection:text-sky-900 whitespace-pre overflow-auto"
-            placeholder="# Write Python code here..."
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect="off"
+            style={{ tabSize: 4 }}
+            className="absolute inset-0 w-full h-full m-0 p-3 font-mono text-xs leading-5 text-transparent caret-zinc-900 bg-transparent resize-none focus:outline-none selection:bg-sky-200/70 whitespace-pre overflow-auto border-none"
+            placeholder={`# Write ${language} code here...`}
           />
         </div>
       </div>

@@ -127,15 +127,36 @@ export const App: React.FC = () => {
 
   const handleSelectFile = useCallback((fileOrName: ProducedFile | string) => {
     const fileName = typeof fileOrName === 'string' ? fileOrName : fileOrName.name;
+    
+    const getInitialContent = (name: string): string => {
+      if (name === 'search_tree.py') return INITIAL_PRODUCED_FILE.content || '';
+      if (name.endsWith('.sh')) {
+        return `#!/bin/bash\n# Medical-Blocks Script: ${name}\nset -e\n\necho "[Medical-Blocks] Executing cluster batch job: ${name}"\nexport CUDA_VISIBLE_DEVICES=0\nDATA_DIR="/mb_data/dicoms"\nOUTPUT_DIR="/workspace/models_run"\n\nmkdir -p "$OUTPUT_DIR"\npython3 search_tree.py --input "$DATA_DIR" --workers 4 --epochs 10\n\necho "Finished batch job with exit status $?"\n`;
+      }
+      if (name.endsWith('.cpp') || name.endsWith('.c') || name.endsWith('.h') || name.endsWith('.hpp')) {
+        return `// Medical-Blocks High-Performance Tensor Acceleration Engine\n// Source: ${name}\n\n#include <iostream>\n#include <vector>\n#include <cmath>\n\nnamespace mb {\n    struct VoxelVolume {\n        int width;\n        int height;\n        int depth;\n        float spacing[3];\n    };\n\n    void compute_retinal_thickness(const VoxelVolume& vol) {\n        std::cout << "[CPP-ACCEL] Processing volume " << vol.width << "x" << vol.height << "x" << vol.depth << std::endl;\n    }\n}\n\nint main(int argc, char** argv) {\n    mb::VoxelVolume vol = { 512, 512, 128, { 0.5f, 0.5f, 2.0f } };\n    mb::compute_retinal_thickness(vol);\n    return 0;\n}\n`;
+      }
+      if (name.endsWith('.sql')) {
+        return `-- Medical-Blocks Clinical Patient Cohort Database Query\n-- File: ${name}\n\nSELECT \n    p.patient_id,\n    p.study_date,\n    COUNT(s.scan_id) AS total_scans,\n    ROUND(AVG(s.segmentation_dice), 4) AS avg_dice_score,\n    s.status\nFROM clinical_patients p\nJOIN scans s ON p.patient_id = s.patient_id\nWHERE s.modality = 'OCT' \n  AND s.status = 'COMPLETED'\nGROUP BY p.patient_id, p.study_date, s.status\nHAVING COUNT(s.scan_id) > 1\nORDER BY avg_dice_score DESC;\n`;
+      }
+      if (name.endsWith('.json')) {
+        return `{\n  "project": "Medical-Blocks",\n  "file": "${name}",\n  "environment": "production-cluster",\n  "model": {\n    "name": "OCT-Segmentation-UNet3D",\n    "version": "1.4.2",\n    "channels": 1,\n    "classes": 4\n  },\n  "gpu": {\n    "device": "NVIDIA A100-SXM4-80GB",\n    "precision": "bfloat16",\n    "distributed": false\n  }\n}\n`;
+      }
+      return `# Medical-Blocks Automated Workspace\n# File: ${name}\n\nimport os\nimport sys\nimport numpy as np\n\ndef run_pipeline():\n    """Execute Medical-Blocks clinical workflow."""\n    print("Executing Medical-Blocks clinical workflow in ${name}")\n    device = "cuda" if os.environ.get("CUDA_VISIBLE_DEVICES") else "cpu"\n    print(f"Target execution hardware: {device}")\n\nif __name__ == '__main__':\n    run_pipeline()\n`;
+    };
+
     const fileObj: ProducedFile = typeof fileOrName === 'string' 
       ? (openFiles.find((f) => f.name === fileName) || {
           name: fileName,
           path: `/workspace/${fileName}`,
           size: '3.4 KB',
-          language: (fileName.endsWith('.sh') ? 'bash' : fileName.endsWith('.json') ? 'json' : 'python') as any,
-          content: fileName === 'search_tree.py' ? INITIAL_PRODUCED_FILE.content : `# Medical-Blocks Automated Workspace\n# File: ${fileName}\n\nimport os\nimport sys\n\ndef run():\n    print("Executing Medical-Blocks clinical workflow in ${fileName}")\n\nif __name__ == '__main__':\n    run()\n`,
+          language: (fileName.endsWith('.sh') ? 'bash' : fileName.endsWith('.cpp') ? 'cpp' : fileName.endsWith('.sql') ? 'sql' : fileName.endsWith('.json') ? 'json' : 'python') as any,
+          content: getInitialContent(fileName),
         })
-      : fileOrName;
+      : {
+          ...fileOrName,
+          content: fileOrName.content || getInitialContent(fileOrName.name),
+        };
 
     setSelectedFile(fileObj);
 
@@ -150,7 +171,7 @@ export const App: React.FC = () => {
       setActiveTabId('notebook');
       showToast(`Loaded notebook: ${fileName}`);
     } else {
-      // Add Python script to open files if not present, and switch tab
+      // Add code file to open files if not present, and switch tab
       setOpenFiles((prev) => {
         if (!prev.some((f) => f.name === fileObj.name)) {
           return [...prev, fileObj];
@@ -158,7 +179,7 @@ export const App: React.FC = () => {
         return prev;
       });
       setActiveTabId(fileObj.name);
-      showToast(`Switched to Python code: ${fileObj.name}`);
+      showToast(`Opened ${fileObj.name}`);
     }
   }, [openFiles, showToast]);
 
@@ -209,7 +230,7 @@ export const App: React.FC = () => {
         {/* 3. EXPLORERBAR (Explorer with Home, Mounts, Shared, MB-DATA with lock icons) */}
         {/* ========================================================================= */}
         {isExplorerOpen && (
-          <div className="h-full rounded-t-lg overflow-hidden border-t border-zinc-200/90 shadow-2xs  pt-[12px]">
+          <div className="h-full rounded-t-lg overflow-hidden border-t border-zinc-200/90 shadow-2xs pt-[16px]">
             <ExplorerBar
               isOpen={isExplorerOpen}
               onClose={() => setIsExplorerOpen(false)}
@@ -278,7 +299,7 @@ export const App: React.FC = () => {
           {isChatOpen && (
             <div 
               style={{ width: `${chatWidth}px` }}
-              className="shrink-0 h-full flex flex-col border-l border-zinc-200/90 bg-white relative overflow-hidden shadow-xs pt-[12px]"
+              className="shrink-0 h-full flex flex-col border-l border-zinc-200/90 bg-white relative overflow-hidden shadow-xs pt-[10px]"
             >
               <MB_AICodeAssistance
                 onSelectFile={handleSelectFile}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Play, 
   ChevronDown, 
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NotebookCellItem, CellType } from '../../../types';
 import OctSegmentationOutput from './OctSegmentationOutput';
+import { highlightCode } from '../../../utils/syntaxHighlight';
 
 interface NotebookCellProps {
   cell: NotebookCellItem;
@@ -55,45 +56,21 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Syntax highlighter for Python lines
-  const renderHighlightedCode = (text: string) => {
-    const lines = text.split('\n');
-    return (
-      <div className="font-mono text-xs leading-relaxed">
-        {lines.map((line, idx) => {
-          // Comment line
-          if (line.trim().startsWith('#')) {
-            return (
-              <div key={idx} className="text-emerald-700 whitespace-pre">
-                {line}
-              </div>
-            );
-          }
+  // Detect cell language (Python, Bash magic, C++ magic, SQL, Markdown)
+  const cellLanguage = useMemo(() => {
+    if (cell.type === 'sql') return 'sql';
+    if (cell.type === 'markdown') return 'markdown';
+    const trimmed = (cell.source || '').trim();
+    if (trimmed.startsWith('%%bash') || trimmed.startsWith('%%sh') || trimmed.startsWith('!')) return 'bash';
+    if (trimmed.startsWith('%%sql') || trimmed.startsWith('SELECT ') || trimmed.startsWith('select ')) return 'sql';
+    if (trimmed.startsWith('%%cpp') || trimmed.startsWith('%%cuda') || trimmed.startsWith('%%c')) return 'cpp';
+    return 'python';
+  }, [cell.type, cell.source]);
 
-          // Simple token highlighting using regex
-          const tokens = line.split(/(\b(?:import|from|as|def|return|for|in|if|else|elif|try|except|print|while|class|with|lambda)\b|"[^"]*"|'[^']*'|#.*$)/g);
-
-          return (
-            <div key={idx} className="whitespace-pre">
-              {tokens.map((token, tIdx) => {
-                if (!token) return null;
-                if (/^(import|from|as|def|return|for|in|if|else|elif|try|except|print|while|class|with|lambda)$/.test(token)) {
-                  return <span key={tIdx} className="text-blue-700 font-semibold">{token}</span>;
-                }
-                if (token.startsWith('"') || token.startsWith("'")) {
-                  return <span key={tIdx} className="text-amber-800">{token}</span>;
-                }
-                if (token.startsWith('#')) {
-                  return <span key={tIdx} className="text-emerald-700">{token}</span>;
-                }
-                return <span key={tIdx} className="text-zinc-900">{token}</span>;
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+  // Syntax highlighted HTML via Prism
+  const highlightedHtml = useMemo(() => {
+    return highlightCode(cell.source, cellLanguage);
+  }, [cell.source, cellLanguage]);
 
   // MARKDOWN CELL (Matches screenshot styling with bold blue accent border)
   if (cell.type === 'markdown') {
@@ -333,31 +310,63 @@ export const NotebookCell: React.FC<NotebookCellProps> = ({
         </div>
       </div>
 
-      {/* Code Area with Line Numbers (matches Screenshot 1, 2, 3) */}
-      <div className="flex border border-zinc-200/90 bg-white overflow-hidden">
+      {/* Code Area with Line Numbers and Real-Time Syntax Highlighting */}
+      <div className="flex border border-zinc-200/90 bg-white overflow-hidden select-text">
         {/* Line Numbers Column */}
-        <div className="w-12 bg-zinc-50 border-r border-zinc-200/80 py-3 select-none text-right pr-3 font-mono text-[11px] text-zinc-400 leading-relaxed shrink-0">
+        <div className="w-12 bg-zinc-50 border-r border-zinc-200/80 py-3 select-none text-right pr-3 font-mono text-[11px] text-zinc-400 leading-5 shrink-0">
           {Array.from({ length: lineCount }).map((_, i) => (
-            <div key={i}>{i + 1}</div>
+            <div key={i} className="h-5">{i + 1}</div>
           ))}
         </div>
 
-        {/* Code Content Column */}
-        <div className="flex-1 relative p-3 overflow-x-auto">
-          {cell.isAiWriting || cell.isStreaming ? (
-            <div className="font-mono text-xs leading-relaxed text-zinc-900 whitespace-pre">
-              {renderHighlightedCode(cell.source)}
-              <span className="inline-block w-2 h-4 bg-sky-500 animate-pulse ml-0.5 align-middle shadow-xs" />
-            </div>
-          ) : (
-            <textarea
-              value={cell.source}
-              onChange={(e) => onUpdateSource(cell.id, e.target.value)}
-              className="w-full bg-transparent font-mono text-xs leading-relaxed text-zinc-900 border-none resize-none focus:outline-hidden min-h-[50px]"
-              rows={lineCount}
-              spellCheck={false}
+        {/* Code Content Column with real-time Syntax Highlighting */}
+        <div className="flex-1 relative overflow-x-auto bg-white min-h-[48px]">
+          {/* Layer 1: Prism Syntax Highlighted Token Display */}
+          <pre
+            aria-hidden="true"
+            className="m-0 p-3 font-mono text-xs leading-5 whitespace-pre pointer-events-none select-none text-zinc-900 border-none bg-transparent"
+            style={{ tabSize: 4 }}
+          >
+            <code 
+              dangerouslySetInnerHTML={{ 
+                __html: (highlightedHtml || '') + (cell.source.endsWith('\n') ? ' ' : '') 
+              }} 
             />
-          )}
+            {(cell.isAiWriting || cell.isStreaming) && (
+              <span className="inline-block w-2 h-4 bg-sky-500 animate-pulse ml-0.5 align-middle shadow-xs" />
+            )}
+          </pre>
+
+          {/* Layer 2: Interactive Transparent Textarea */}
+          <textarea
+            value={cell.source}
+            onChange={(e) => onUpdateSource(cell.id, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = e.currentTarget.selectionStart;
+                const end = e.currentTarget.selectionEnd;
+                const newSource = cell.source.substring(0, start) + '    ' + cell.source.substring(end);
+                onUpdateSource(cell.id, newSource);
+                const target = e.currentTarget;
+                setTimeout(() => {
+                  target.selectionStart = target.selectionEnd = start + 4;
+                }, 0);
+              } else if (e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                onRunCell(cell.id);
+              }
+            }}
+            readOnly={cell.isAiWriting || cell.isStreaming}
+            spellCheck={false}
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect="off"
+            style={{ tabSize: 4 }}
+            className={`absolute inset-0 w-full h-full m-0 p-3 font-mono text-xs leading-5 text-transparent caret-zinc-900 bg-transparent resize-none focus:outline-none selection:bg-sky-200/70 whitespace-pre overflow-hidden border-none ${
+              cell.isAiWriting || cell.isStreaming ? 'cursor-wait' : ''
+            }`}
+          />
         </div>
       </div>
 

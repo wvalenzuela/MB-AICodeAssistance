@@ -313,7 +313,7 @@ export const NotebookEditor: React.FC<NotebookEditorProps> = ({
     } : null);
 
   return (
-    <div ref={containerRef} className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#f8fafc] overflow-hidden select-text border-r border-zinc-200 pt-[16px]">
+    <div ref={containerRef} className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#f8fafc] overflow-hidden select-text border-r border-zinc-200 pt-[14px]">
       {/* 0. Editor Tabs Bar - Hidden when only one tab remains per user request */}
       {showTabBar && (
         <div className="h-[34px] bg-[#f1f5f9] border-b border-zinc-200/80 flex items-end justify-between px-3 shrink-0 select-none min-w-0">

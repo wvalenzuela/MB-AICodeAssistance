@@ -96,3 +96,137 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(160, 174, 192, 0.55);
 }
+
+/* ========================================================================= */
+/* PRISM SYNTAX HIGHLIGHTING (Python, Bash, C++, SQL, JSON, Markdown)       */
+/* Exact AI Code Writer Palette: text-blue-700, text-amber-800, emerald-700  */
+/* ========================================================================= */
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #047857; /* text-emerald-700 */
+  font-style: normal;
+}
+
+.token.punctuation {
+  color: #18181b; /* text-zinc-900 */
+}
+
+.token.namespace {
+  opacity: 0.8;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #1d4ed8; /* text-blue-700 */
+  font-weight: 600;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char {
+  color: #92400e; /* text-amber-800 */
+}
+
+.token.builtin {
+  color: #1d4ed8; /* text-blue-700 font-semibold */
+  font-weight: 600;
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: #27272a; /* text-zinc-800 */
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #1d4ed8; /* text-blue-700 font-semibold */
+  font-weight: 600;
+}
+
+/* Python / C++ specific keyword enhancement */
+.token.keyword.keyword-def,
+.token.keyword.keyword-class,
+.token.keyword.keyword-import,
+.token.keyword.keyword-from,
+.token.keyword.keyword-return,
+.token.keyword.keyword-for,
+.token.keyword.keyword-in,
+.token.keyword.keyword-if,
+.token.keyword.keyword-else,
+.token.keyword.keyword-elif,
+.token.keyword.keyword-try,
+.token.keyword.keyword-except,
+.token.keyword.keyword-print,
+.token.keyword.keyword-while,
+.token.keyword.keyword-with,
+.token.keyword.keyword-lambda,
+.token.keyword.keyword-as {
+  color: #1d4ed8; /* text-blue-700 */
+  font-weight: 600;
+}
+
+.token.function,
+.token.class-name {
+  color: #1d4ed8; /* text-blue-700 */
+  font-weight: 600;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #18181b; /* text-zinc-900 */
+}
+
+.token.decorator {
+  color: #1d4ed8; /* text-blue-700 */
+  font-weight: 600;
+}
+
+/* Bash / Shell specific tokens */
+.token.command {
+  color: #1d4ed8; /* text-blue-700 */
+  font-weight: 600;
+}
+
+.token.shebang {
+  color: #047857; /* text-emerald-700 */
+  font-weight: 600;
+}
+
+.token.parameter {
+  color: #92400e; /* text-amber-800 */
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.deleted {
+  color: #b91c1c;
+  background-color: #fee2e2;
+}
+
+.token.inserted {
+  color: #047857;
+  background-color: #d1fae5;
+}
+
