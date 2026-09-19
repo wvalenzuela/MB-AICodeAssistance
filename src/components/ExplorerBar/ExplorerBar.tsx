@@ -71,6 +71,7 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
   // Home Folder tree expansion state
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'jobs': true,
+    'sync_test': true,
     'Projects': false,
     'Codes': false,
     'DICOM_THAT_FAIL': false,
@@ -81,7 +82,7 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
   const [expandedMbFolders, setExpandedMbFolders] = useState<Record<string, boolean>>({});
 
   // Selected file highlight
-  const [selectedFileName, setSelectedFileName] = useState<string>('file.py');
+  const [selectedFileName, setSelectedFileName] = useState<string>('test.ipynb');
 
   // Context menu state
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
@@ -178,7 +179,7 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
 
   return (
     <aside 
-      className="w-72 sm:w-80 h-full bg-[#f8fafc] border-r border-zinc-200/90 flex flex-col shrink-0 select-none z-20 text-zinc-700 font-sans shadow-xs relative"
+      className="w-60 sm:w-64 h-full bg-[#f8fafc] border-r border-zinc-200/90 flex flex-col shrink-0 select-none z-20 text-zinc-700 font-sans shadow-xs relative"
       onContextMenu={handleContextMenu}
     >
       {/* Top Header: EXPLORER and Close X Button */}
@@ -276,6 +277,24 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
           {/* File & Folder List */}
           {isHomeOpen && (
             <div className="py-1 px-1 font-mono text-[11px] leading-tight space-y-0.5">
+              {/* Primary Active Notebook: test.ipynb */}
+              <div 
+                onClick={() => handleSelectFile({ name: 'test.ipynb', size: '5.2 KB' })}
+                className={`flex items-center justify-between px-2 py-1 rounded cursor-pointer transition-colors ${
+                  selectedFileName === 'test.ipynb' 
+                    ? 'bg-[#dbeafe] text-[#1e40af] font-semibold border border-sky-300/60 shadow-2xs' 
+                    : 'hover:bg-zinc-200/50 text-zinc-800'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="w-3.5 h-3.5 rounded-xs bg-[#e27300] flex items-center justify-center text-white text-[9px] font-bold shrink-0">
+                    J
+                  </span>
+                  <span className="truncate">test.ipynb</span>
+                </div>
+                <span className="text-[9px] bg-sky-100 text-sky-800 px-1 py-0.2 rounded font-sans font-medium">open</span>
+              </div>
+
               {/* Folder: A */}
               <div 
                 onClick={() => toggleFolder('A')}
@@ -457,8 +476,6 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
                 'Dockers',
                 'Documents',
                 'DPAI',
-                'sync_test',
-                'wvalenzuela',
               ].map((folder) => (
                 <div 
                   key={folder}
@@ -470,6 +487,66 @@ export const ExplorerBar: React.FC<ExplorerBarProps> = ({
                   <span className="truncate">{folder}</span>
                 </div>
               ))}
+
+              {/* Folder: sync_test (Highlighted in Notebook Cell 0) */}
+              <div>
+                <div 
+                  onClick={() => toggleFolder('sync_test')}
+                  className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-200/50 rounded cursor-pointer text-zinc-700"
+                >
+                  <ChevronRight className={`w-3 h-3 text-zinc-400 transition-transform ${expandedFolders['sync_test'] ? 'rotate-90' : ''}`} />
+                  {expandedFolders['sync_test'] ? (
+                    <FolderOpen className="w-3.5 h-3.5 text-amber-500 fill-amber-400/20" />
+                  ) : (
+                    <Folder className="w-3.5 h-3.5 text-amber-500 fill-amber-400/20" />
+                  )}
+                  <span className="truncate font-semibold text-zinc-900">sync_test</span>
+                </div>
+
+                {expandedFolders['sync_test'] && (
+                  <div className="pl-4 space-y-0.5">
+                    {/* Timestamped run directory from Notebook Cell 0 */}
+                    <div 
+                      onClick={() => toggleFolder('sync_run')}
+                      className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-200/50 rounded cursor-pointer text-zinc-700"
+                    >
+                      <ChevronRight className={`w-3 h-3 text-zinc-400 transition-transform ${expandedFolders['sync_run'] ? 'rotate-90' : ''}`} />
+                      <Folder className="w-3.5 h-3.5 text-sky-500 fill-sky-400/20" />
+                      <span className="truncate font-mono text-[10px]">run_20260919_043653</span>
+                    </div>
+
+                    <div 
+                      onClick={() => handleSelectFile({ name: 'test.ipynb', size: '5.2 KB' })}
+                      className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-colors ${
+                        selectedFileName === 'test.ipynb' ? 'bg-[#dbeafe] text-[#1e40af] font-medium' : 'hover:bg-zinc-200/50 text-zinc-700'
+                      }`}
+                    >
+                      <span className="w-3 h-3 rounded-xs bg-[#e27300] flex items-center justify-center text-white text-[8px] font-bold">J</span>
+                      <span className="truncate font-mono text-[10px]">test.ipynb</span>
+                    </div>
+
+                    <div 
+                      onClick={() => handleSelectFile({ name: 'verify_sync.py', size: '1.2 KB' })}
+                      className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-colors ${
+                        selectedFileName === 'verify_sync.py' ? 'bg-[#dbeafe] text-[#1e40af] font-medium' : 'hover:bg-zinc-200/50 text-zinc-700'
+                      }`}
+                    >
+                      {renderFileIcon('python')}
+                      <span className="truncate font-mono text-[10px]">verify_sync.py</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Folder: wvalenzuela */}
+              <div 
+                onClick={() => toggleFolder('wvalenzuela')}
+                className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-200/50 rounded cursor-pointer text-zinc-700"
+              >
+                <ChevronRight className={`w-3 h-3 text-zinc-400 transition-transform ${expandedFolders['wvalenzuela'] ? 'rotate-90' : ''}`} />
+                <Folder className="w-3.5 h-3.5 text-amber-500 fill-amber-400/20" />
+                <span className="truncate">wvalenzuela</span>
+              </div>
 
               {/* Dynamic Produced Files from Session (search_tree.py) */}
               {producedFiles.map((file) => (

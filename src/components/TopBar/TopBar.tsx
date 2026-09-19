@@ -11,7 +11,10 @@ import {
   Check, 
   Copy,
   Building2,
-  FolderGit2
+  FolderGit2,
+  Terminal,
+  RotateCw,
+  Maximize2
 } from 'lucide-react';
 import LoginModal from './LoginModal';
 
@@ -22,6 +25,7 @@ export interface TopBarProps {
   userEmail?: string;
   userName?: string;
   unitId?: string;
+  activeFileName?: string;
   onShowToast?: (message: string) => void;
   onLoginSuccess?: (email: string, displayName: string) => void;
 }
@@ -33,6 +37,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   userEmail,
   userName,
   unitId = 'UNIT-MD-08',
+  activeFileName,
   onShowToast,
   onLoginSuccess,
 }) => {
@@ -106,7 +111,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     .slice(0, 2);
 
   return (
-    <header className="h-12 w-full bg-[#00486b] text-white flex items-center justify-between px-3 sm:px-4 shrink-0 select-none z-30 shadow-xs">
+    <header className="h-12 w-full bg-[#00486b] text-white flex items-center justify-between px-3 sm:px-4 shrink-0 select-none relative z-20 shadow-xs">
       {/* Left side: Hamburger & Medical-Blocks Logo */}
       <div className="flex items-center gap-3">
         <button
@@ -126,6 +131,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           </span>
         </div>
       </div>
+
 
       {/* Right side: Help, Notifications, and Login / User Account Area */}
       <div className="flex items-center gap-1.5 sm:gap-2">

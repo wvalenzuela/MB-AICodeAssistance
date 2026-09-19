@@ -1,4 +1,4 @@
-export type ToolType = 'think' | 'write' | 'bash' | 'read' | 'grep' | 'search';
+export type ToolType = 'think' | 'write' | 'bash' | 'read' | 'grep' | 'search' | 'run';
 
 export interface ToolCallItem {
   id: string;
@@ -72,6 +72,52 @@ export type ActiveTab = 'chat' | 'trajectory';
 export type WorkspaceMode = 'Workspace Write' | 'Workspace Read-Only' | 'Isolated Sandbox';
 export type ModelOption = 'qwen3.8-27b-a100-80g' | 'gemini-2.5-pro' | 'gemini-2.5-flash' | 'claude-3.7-sonnet';
 export type TerminalPosition = 'bottom' | 'top' | 'left' | 'right';
+
+export type CellType = 'code' | 'markdown' | 'sql' | 'raw';
+
+export interface CellOutput {
+  type: 'text' | 'error' | 'table' | 'html' | 'image';
+  content: string;
+  ename?: string;
+  evalue?: string;
+  traceback?: string[];
+  imageUrl?: string;
+  tableData?: { headers: string[]; rows: (string | number)[][] };
+}
+
+export interface NotebookCellItem {
+  id: string;
+  type: CellType;
+  source: string;
+  executionCount: number | null;
+  outputs?: CellOutput[];
+  status?: 'idle' | 'running' | 'streaming' | 'error' | 'success';
+  headerTitle?: string;
+  isAiWriting?: boolean;
+  isStreaming?: boolean;
+  streamingStatusText?: string;
+  streamingSpeed?: string;
+  isOctSegmentation?: boolean;
+}
+
+export interface NotebookData {
+  title: string;
+  path: string;
+  kernel: string;
+  kernelStatus: 'idle' | 'busy' | 'restarting';
+  gpu: string;
+  cells: NotebookCellItem[];
+}
+
+export type AiNotebookCommand = 
+  | { type: 'create_cell'; cellType?: CellType }
+  | { type: 'write_oct_segmentation'; targetCellId?: string }
+  | { type: 'execute_last_cell' }
+  | { type: 'execute_cell'; cellId: string }
+  | { type: 'fix_error'; targetCellId?: string }
+  | { type: 'custom_instruction'; prompt: string; targetCellId?: string };
+
+export type ViewLayoutMode = 'split' | 'notebook' | 'chat';
 
 export interface ApprovalRequest {
   request_id: string;

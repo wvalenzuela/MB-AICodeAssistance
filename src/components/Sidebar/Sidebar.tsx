@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   if (!isOpen) return null;
 
   return (
-    <aside className="w-14 bg-white border-r border-zinc-200/80 flex flex-col justify-between items-center py-1 select-none shrink-0 z-20">
+    <aside className="w-14 bg-white border-r border-t border-zinc-200/80 rounded-t-lg flex flex-col justify-between items-center py-2 select-none shrink-0 z-20">
       {/* Top Nav Items List */}
       <div className="flex flex-col items-center w-full gap-0.5">
         {NAV_ITEMS.map((item) => {

@@ -16,6 +16,22 @@ export {
   type MBAICodeAssistanceProps 
 } from './MB-AICodeAssistance';
 
+// Notebook Editor
+export {
+  NotebookEditor,
+  NotebookHeader,
+  NotebookMenuBar,
+  NotebookToolbar,
+  GpuAccessBanner,
+  NotebookCell,
+  AddCellBar,
+  type NotebookEditorProps
+} from './NotebookEditor';
+export { useNotebookAiSimulation } from './NotebookEditor/useNotebookAiSimulation';
+
+// TerminalDock Standalone Module
+export * from './TerminalDock';
+
 // Sub-components re-exported from their parent modules
 export { 
   ChatInput, 

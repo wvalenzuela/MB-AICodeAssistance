@@ -5,10 +5,16 @@ import {
   Download, 
   PanelLeft, 
   PanelLeftClose, 
+  PanelRightClose,
+  X,
   FileCode2, 
   TerminalSquare, 
   Workflow,
-  FileText
+  FileText,
+  Plus,
+  Play,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   ActiveTab, 
@@ -17,7 +23,8 @@ import {
   SessionStats, 
   WorkspaceMode, 
   ModelOption,
-  TerminalPosition 
+  TerminalPosition,
+  NotebookData
 } from '../../types';
 import { 
   INITIAL_MESSAGES, 
@@ -42,6 +49,17 @@ export interface MBAICodeAssistanceProps {
   onSelectFile?: (file: ProducedFile) => void;
   onShowToast?: (message: string) => void;
   defaultSessionTitle?: string;
+  // Notebook connection
+  notebook?: NotebookData;
+  onTriggerNotebookAiWrite?: (
+    prompt: string, 
+    targetCellId?: string, 
+    onComplete?: (cellId: string, summary: string) => void
+  ) => void;
+  isAiGeneratingNotebook?: boolean;
+  isSplitView?: boolean;
+  onToggleSplitView?: () => void;
+  onCloseChat?: () => void;
 }
 
 const ASSISTANT_RESPONSE_DELAY_MS = 1100;
@@ -53,6 +71,12 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
   onSelectFile,
   onShowToast,
   defaultSessionTitle = 'hi',
+  notebook,
+  onTriggerNotebookAiWrite,
+  isAiGeneratingNotebook = false,
+  isSplitView = true,
+  onToggleSplitView,
+  onCloseChat,
 }) => {
   // Session state
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
@@ -134,6 +158,94 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
 
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
+
+    const lower = trimmed.toLowerCase();
+
+    // Check if prompt is notebook-related and onTriggerNotebookAiWrite is available
+    if (onTriggerNotebookAiWrite) {
+      const isCreateCell = 
+        lower.includes('create cell') || 
+        lower.includes('new cell') || 
+        lower.includes('add cell') ||
+        (lower.includes('create') && lower.includes('cell'));
+
+      const isOct = 
+        lower.includes('oct') || 
+        lower.includes('segmentation') || 
+        lower.includes('retina');
+
+      const isExecute = 
+        lower.includes('execute') || 
+        lower.includes('run last') || 
+        lower.includes('run cell');
+
+      const isNotebookPrompt = 
+        isCreateCell ||
+        isOct ||
+        isExecute ||
+        lower.includes('root') || 
+        lower.includes('cell') || 
+        lower.includes('notebook') || 
+        lower.includes('fix') || 
+        lower.includes('clean') ||
+        lower.includes('code') ||
+        lower.includes('write') ||
+        lower.includes('preprocess') ||
+        lower.includes('test.ipynb');
+
+      if (isNotebookPrompt) {
+        onTriggerNotebookAiWrite(trimmed, undefined, (cellId, summary) => {
+          let toolTitle = 'notebook_agent.write_cell';
+          let toolDetail = `Updated cell ${cellId} in home > test.ipynb and verified execution`;
+          let toolType: 'write' | 'run' = 'write';
+          let responseContent = `I analyzed the notebook state and executed your request (**home > test.ipynb**).\n\n${summary}`;
+
+          if (isCreateCell) {
+            toolTitle = 'notebook_agent.create_cell';
+            toolDetail = `Created new Python code cell [${cellId}] in home > test.ipynb`;
+            responseContent = `I have initialized and created a new Python code cell in your active notebook (**home > test.ipynb**).\n\n- **Cell ID**: \`${cellId}\`\n- **Kernel Target**: Python 3 (ipykernel)\n- **State**: \`In [ ]:\` ready for code streaming or manual input.\n\nYou can now instruct me to stream code into it or execute clinical routines.`;
+          } else if (isOct) {
+            toolTitle = 'notebook_agent.stream_code';
+            toolDetail = `Streamed PyTorch UNet OCT Retinal Layer Segmentation to cell [${cellId}]`;
+            responseContent = `I generated an end-to-end **PyTorch UNet** pipeline for **Optical Coherence Tomography (OCT) Retinal Layer Segmentation** directly into your notebook.\n\n- **Target Anatomical Layers**: ILM (Internal Limiting Membrane), IPL/INL, RPE, and Choroidal boundary\n- **Architecture**: Multi-scale UNet with axial dilated bottleneck convolutions\n- **Input Shape**: 1×512×512 Spectralis SD-OCT B-scans\n- **Acceleration**: Configured for NVIDIA A100 GPU\n\nCode tokens streamed live into cell \`${cellId}\`. Click **Execute Last Cell** or press Shift+Enter in the notebook to view the interactive layer segmentation visualizer.`;
+          } else if (isExecute) {
+            toolTitle = 'kernel.execute_cell';
+            toolType = 'run';
+            toolDetail = `Executed cell [${cellId}] in Python 3 kernel · 0 errors`;
+            responseContent = `Executed the last notebook cell (\`${cellId}\`) in the **Python 3** kernel on NVIDIA A100.\n\n- **Inference Speed**: \`38.4 ms\` (26.0 FPS)\n- **Mean Dice Accuracy**: **0.939** across 5 retinal layers:\n  - **ILM**: 0.964\n  - **IPL / INL**: 0.938 / 0.927\n  - **RPE**: 0.952\n  - **Choroid**: 0.915\n\nInteractive Retinal Thickness Map and B-Scan overlay have been rendered directly in the cell output area.`;
+          }
+
+          const assistantMessage: Message = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'assistant',
+            content: responseContent,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            toolCallsSummary: `1 tool call · ${toolTitle}`,
+            toolCalls: [
+              {
+                id: `tc-${Date.now()}`,
+                type: toolType,
+                title: toolTitle,
+                detail: toolDetail,
+                linesAdded: isCreateCell ? 1 : isOct ? 42 : 12,
+                linesRemoved: 0,
+              },
+            ],
+            duration: isExecute ? '1.2s' : isOct ? '2.1s' : '0.6s',
+            usageTokens: isOct ? 'Usage 542 tok' : 'Usage 288 tok',
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+          setIsLoading(false);
+          setStats((prev) => ({
+            ...prev,
+            turns: prev.turns + 1,
+            steps: prev.steps + 2,
+          }));
+        });
+        return;
+      }
+    }
 
     // Simulate Agent Thinking and Response
     setTimeout(() => {
@@ -226,195 +338,231 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
     }
   };
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelWidth, setPanelWidth] = useState<number>(440);
+
+  useEffect(() => {
+    if (!panelRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPanelWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(panelRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const isSmallPanel = panelWidth < 460;
+
   return (
-    <div className={`flex-1 min-w-0 h-full flex flex-col relative bg-white overflow-hidden ${className}`}>
-      {/* Sub-Header / Workbench Bar */}
-      <div className="h-11 border-b border-zinc-200/90 bg-white px-3 sm:px-4 flex items-center justify-between shrink-0 select-none z-10 gap-2">
-        
-        {/* Left: Explorer Toggle & Session Title & Mode */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {onToggleExplorer && (
-            <button
-              type="button"
-              onClick={onToggleExplorer}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${
-                isExplorerOpen
-                  ? 'bg-zinc-100 border-zinc-300 text-zinc-900'
-                  : 'bg-white border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
-              }`}
-              title={isExplorerOpen ? 'Hide Explorer' : 'Show Explorer'}
-              aria-label="Toggle Explorer"
-            >
-              {isExplorerOpen ? (
-                <PanelLeftClose className="w-4 h-4" />
-              ) : (
-                <PanelLeft className="w-4 h-4" />
-              )}
-            </button>
-          )}
-
-          {/* Session Title (Editable) */}
-          {isEditingTitle ? (
-            <input
-              type="text"
-              value={tempTitle}
-              onChange={(e) => setTempTitle(e.target.value)}
-              onBlur={handleTitleSubmit}
-              onKeyDown={handleTitleKeyDown}
-              autoFocus
-              className="text-sm font-semibold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded border border-blue-500 focus:outline-hidden min-w-0 max-w-xs"
-            />
-          ) : (
-            <div
-              onClick={() => {
-                setIsEditingTitle(true);
-                setTempTitle(sessionTitle);
-              }}
-              className="group flex items-center gap-1.5 cursor-pointer py-0.5 px-1 rounded-md hover:bg-zinc-100/80 transition-colors min-w-0 shrink"
-              title="Click to rename session"
-            >
-              <h1 className="text-sm sm:text-base font-semibold text-zinc-900 tracking-tight truncate max-w-[140px] sm:max-w-xs">
-                {sessionTitle}
-              </h1>
-              <span className="text-xs text-zinc-400 group-hover:text-zinc-600 shrink-0">✎</span>
+    <div ref={panelRef} className={`flex-1 min-w-0 h-full flex flex-col relative bg-white overflow-hidden ${className}`}>
+      {/* Sub-Header / Workbench Bar with Horizontal Scrolling */}
+      <div 
+        className="h-10 border-b border-zinc-200/90 bg-white flex items-center shrink-0 select-none z-10 overflow-x-auto no-scrollbar scrollbar-none min-w-0 px-2.5 sm:px-3"
+        title="Scroll horizontally to view all toolbar tools"
+        onWheel={(e) => {
+          if (e.deltaY !== 0 && !e.shiftKey) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
+      >
+        <div className="flex items-center gap-2 min-w-max">
+          {/* Left: AI Assistant Badge & Session Title & Mode */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#00486b] to-[#0284c7] flex items-center justify-center text-white shrink-0 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-sky-200" />
             </div>
-          )}
 
-          {/* Workspace Mode Dropdown */}
-          <div ref={modeDropdownRef} className="relative shrink-0 hidden xs:block">
-            <button
-              type="button"
-              onClick={() => setIsModeDropdownOpen(!isModeDropdownOpen)}
-              className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/70 py-1 px-2.5 rounded-full transition-colors border border-zinc-200/70 font-medium cursor-pointer shrink-0 select-none whitespace-nowrap"
-            >
-              {workspaceMode === 'Workspace Write' ? (
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              ) : (
-                <FileCode2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              )}
-              <span className="truncate max-w-[110px] sm:max-w-none">{workspaceMode}</span>
-              <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" />
-            </button>
-
-            {isModeDropdownOpen && (
-              <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-zinc-200 py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1.5 font-semibold text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-100">
-                  Execution Mode
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkspaceMode('Workspace Write');
-                    setIsModeDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
-                    workspaceMode === 'Workspace Write' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <div>
-                    <div>Workspace Write</div>
-                    <div className="text-[10px] text-zinc-400">Can create, edit, & execute scripts</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkspaceMode('Workspace Read-Only');
-                    setIsModeDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
-                    workspaceMode === 'Workspace Read-Only' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
-                  }`}
-                >
-                  <FileCode2 className="w-3.5 h-3.5 text-zinc-400" />
-                  <div>
-                    <div>Workspace Read-Only</div>
-                    <div className="text-[10px] text-zinc-400">Restricted inspection without writes</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkspaceMode('Isolated Sandbox');
-                    setIsModeDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
-                    workspaceMode === 'Isolated Sandbox' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
-                  }`}
-                >
-                  <TerminalSquare className="w-3.5 h-3.5 text-emerald-600" />
-                  <div>
-                    <div>Isolated Sandbox</div>
-                    <div className="text-[10px] text-zinc-400">Interactive CLI execution container</div>
-                  </div>
-                </button>
+            {/* Session Title (Editable) */}
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                className="text-xs sm:text-sm font-semibold text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded border border-blue-500 focus:outline-hidden min-w-0 max-w-xs"
+              />
+            ) : (
+              <div
+                onClick={() => {
+                  setIsEditingTitle(true);
+                  setTempTitle(sessionTitle);
+                }}
+                className="group flex items-center gap-1 cursor-pointer py-0.5 px-1 rounded-md hover:bg-zinc-100/80 transition-colors shrink-0"
+                title="Click to rename session"
+              >
+                <h1 className="text-xs sm:text-sm font-semibold text-zinc-900 tracking-tight truncate max-w-[130px]">
+                  {sessionTitle}
+                </h1>
+                <span className="text-[10px] text-zinc-400 group-hover:text-zinc-600 shrink-0">✎</span>
               </div>
             )}
+
+            {/* Workspace Mode Dropdown */}
+            <div ref={modeDropdownRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModeDropdownOpen(!isModeDropdownOpen)}
+                className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200/70 py-1 px-2 sm:px-2.5 rounded-full transition-colors border border-zinc-200/70 font-medium cursor-pointer shrink-0 select-none whitespace-nowrap"
+                title={`Mode: ${workspaceMode}`}
+              >
+                {workspaceMode === 'Workspace Write' ? (
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                ) : (
+                  <FileCode2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                )}
+                <span>{workspaceMode}</span>
+                <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" />
+              </button>
+
+              {isModeDropdownOpen && (
+                <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-zinc-200 py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3 py-1.5 font-semibold text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-100">
+                    Execution Mode
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkspaceMode('Workspace Write');
+                      setIsModeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
+                      workspaceMode === 'Workspace Write' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <div>
+                      <div>Workspace Write</div>
+                      <div className="text-[10px] text-zinc-400">Can create, edit, & execute scripts</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkspaceMode('Workspace Read-Only');
+                      setIsModeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
+                      workspaceMode === 'Workspace Read-Only' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
+                    }`}
+                  >
+                    <FileCode2 className="w-3.5 h-3.5 text-zinc-400" />
+                    <div>
+                      <div>Workspace Read-Only</div>
+                      <div className="text-[10px] text-zinc-400">Restricted inspection without writes</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkspaceMode('Isolated Sandbox');
+                      setIsModeDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-50 cursor-pointer ${
+                      workspaceMode === 'Isolated Sandbox' ? 'font-medium text-zinc-900 bg-zinc-50/60' : 'text-zinc-600'
+                    }`}
+                  >
+                    <TerminalSquare className="w-3.5 h-3.5 text-emerald-600" />
+                    <div>
+                      <div>Isolated Sandbox</div>
+                      <div className="text-[10px] text-zinc-400">Interactive CLI execution container</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Center: Chat vs Trajectory Switcher */}
-        <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/70 text-xs shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('chat')}
-            className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
-              activeTab === 'chat'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
-            }`}
-          >
-            Chat
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('trajectory')}
-            className={`px-3 py-1 rounded-md font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'trajectory'
-                ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                : 'text-zinc-600 hover:text-zinc-900'
-            }`}
-          >
-            <span>Trajectory</span>
-            <span className="text-[10px] px-1 py-0.1 rounded-full bg-blue-50 text-blue-700 font-mono border border-blue-200/60">
-              Live
-            </span>
-          </button>
-        </div>
+          {/* Center: Chat vs Trajectory Switcher */}
+          <div className="flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/70 text-xs shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('chat')}
+              className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer shrink-0 ${
+                activeTab === 'chat'
+                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('trajectory')}
+              className={`px-3 py-1 rounded-md font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                activeTab === 'trajectory'
+                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              <span>Trajectory</span>
+              <span className="text-[10px] px-1 py-0.1 rounded-full bg-blue-50 text-blue-700 font-mono border border-blue-200/60">
+                Live
+              </span>
+            </button>
+          </div>
 
-        {/* Right: Actions (Session Log & Workflow Tools toggle) */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Download / Session Log */}
-          <button
-            type="button"
-            onClick={() => setIsSessionLogOpen(true)}
-            className="p-1.5 sm:px-2.5 sm:py-1 text-xs text-zinc-600 hover:text-zinc-900 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Download & View Full Session Log"
-          >
-            <Download className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="hidden md:inline">Session Log</span>
-          </button>
+          {/* Right: Actions (Session Log & Workflow Tools toggle) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Split / Notebook View Toggle */}
+            {onToggleSplitView && (
+              <button
+                type="button"
+                onClick={onToggleSplitView}
+                className="p-1.5 sm:px-2.5 sm:py-1 text-xs text-zinc-600 hover:text-zinc-900 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                title={isSplitView ? 'Focus AI Chat (Hide Notebook)' : 'Show Split View with Notebook'}
+              >
+                <FileCode2 className="w-3.5 h-3.5 text-zinc-500" />
+                <span className="hidden lg:inline">{isSplitView ? 'Focus Chat' : 'Split Notebook'}</span>
+              </button>
+            )}
 
-          {/* Workflow & Tools Panel Toggle Button (Image 2) */}
-          <button
-            type="button"
-            onClick={() => setIsWorkflowPanelOpen(!isWorkflowPanelOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors cursor-pointer ${
-              isWorkflowPanelOpen
-                ? 'bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd] shadow-2xs'
-                : 'bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 border-zinc-200'
-            }`}
-            title="Toggle Workflow & Tools Panel"
-          >
-            <Workflow className="w-3.5 h-3.5 text-sky-600" />
-            <span className="hidden sm:inline">Workflow Panel</span>
-          </button>
+            {/* Download / Session Log */}
+            <button
+              type="button"
+              onClick={() => setIsSessionLogOpen(true)}
+              className="p-1.5 sm:px-2.5 sm:py-1 text-xs text-zinc-600 hover:text-zinc-900 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              title="Download & View Full Session Log"
+            >
+              <Download className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Session Log</span>
+            </button>
+
+            {/* Workflow & Tools Panel Toggle Button (Image 2) */}
+            <button
+              type="button"
+              onClick={() => setIsWorkflowPanelOpen(!isWorkflowPanelOpen)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors cursor-pointer shrink-0 ${
+                isWorkflowPanelOpen
+                  ? 'bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd] shadow-2xs'
+                  : 'bg-white text-zinc-700 hover:text-zinc-950 hover:bg-zinc-50 border-zinc-200'
+              }`}
+              title="Toggle Workflow & Tools Panel"
+            >
+              <Workflow className="w-3.5 h-3.5 text-sky-600" />
+              <span>Workflow Panel</span>
+            </button>
+
+            {/* Optional Collapse Chat Panel Button */}
+            {onCloseChat && (
+              <button
+                type="button"
+                onClick={onCloseChat}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer ml-0.5 shrink-0"
+                title="Collapse AI Assistant (Focus Notebook)"
+                aria-label="Collapse AI Assistant"
+              >
+                <PanelRightClose className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Content Area + Slide-in Workflow Panel */}
-      <div className="flex-1 flex min-h-0 relative overflow-hidden">
+      <div className="flex-1 flex min-h-0 relative overflow-hidden ">
         
         {/* Left / Center: Chat or Trajectory view with Dockable Terminal */}
         <div 
@@ -495,6 +643,63 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
                   {/* Backdrop gradient starting at the middle of the input chat and fading to solid white */}
                   <div className="absolute inset-0 -top-8 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none" />
                   <div className="relative max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-4 pointer-events-auto pb-2">
+                    {/* Quick Notebook Diagnostic Banner */}
+                    {notebook?.cells.some((c) => c.outputs?.some((o) => o.type === 'error')) && (
+                      <div className="mb-2 p-2 px-3 bg-rose-50/95 border border-rose-200/90 rounded-xl flex items-center justify-between text-xs text-rose-800 shadow-2xs backdrop-blur-xs animate-in fade-in slide-in-from-bottom-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Sparkles className="w-3.5 h-3.5 text-rose-600 animate-spin shrink-0" />
+                          <span className="truncate">
+                            Notebook Diagnostic: <strong className="font-semibold font-mono text-[11px]">NameError: name 'ROOT' is not defined</strong> in Cell 13
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendMessage("Fix the ROOT error in Cell 13 of the notebook")}
+                          className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md font-medium text-[11px] transition-colors cursor-pointer shadow-xs shrink-0 ml-2"
+                        >
+                          AI Fix in Notebook
+                        </button>
+                      </div>
+                    )}
+
+                    {/* AI Notebook Stream Actions Bar */}
+                    <div className="mb-2 flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none select-none text-xs">
+                      <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-sky-600" />
+                        AI Actions:
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage("create a new cell")}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-800 rounded-full font-medium transition-all shadow-2xs hover:border-zinc-300 cursor-pointer shrink-0"
+                        title="Create a new cell in the notebook"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-sky-600" />
+                        <span>+ Create Cell</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage("write a code for OCT segmentation")}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 border border-sky-200/90 text-sky-900 rounded-full font-medium transition-all shadow-2xs cursor-pointer shrink-0"
+                        title="Stream PyTorch OCT Retinal Layer Segmentation code into notebook"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Write OCT Segmentation</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage("execute last cell")}
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-full font-medium transition-all shadow-2xs cursor-pointer shrink-0"
+                        title="Execute the last cell in the notebook"
+                      >
+                        <Play className="w-3 h-3 fill-emerald-600 text-emerald-600" />
+                        <span>Execute Last Cell</span>
+                      </button>
+                    </div>
+
                     <ChatInput
                       onSendMessage={handleSendMessage}
                       isLoading={isLoading}
@@ -548,6 +753,7 @@ export const MBAICodeAssistance: React.FC<MBAICodeAssistanceProps> = ({
       <FilePreviewModal
         file={selectedPreviewFile}
         onClose={() => setSelectedPreviewFile(null)}
+        onOpenInWorkspace={onSelectFile}
       />
 
       {/* Session Log Modal */}

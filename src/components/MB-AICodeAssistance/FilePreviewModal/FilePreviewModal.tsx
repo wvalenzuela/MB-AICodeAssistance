@@ -1,10 +1,11 @@
 import React from 'react';
-import { X, Copy, Check, Download, FileCode } from 'lucide-react';
+import { X, Copy, Check, Download, FileCode, ExternalLink } from 'lucide-react';
 import { ProducedFile } from '../../../types';
 
 interface FilePreviewModalProps {
   file: ProducedFile | null;
   onClose: () => void;
+  onOpenInWorkspace?: (file: ProducedFile) => void;
 }
 
 interface FilePreviewModalState {
@@ -77,6 +78,21 @@ class FilePreviewModal extends React.Component<FilePreviewModalProps, FilePrevie
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              {this.props.onOpenInWorkspace && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    this.props.onOpenInWorkspace?.(file);
+                    this.handleClose();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 hover:bg-sky-100 transition-colors shadow-2xs cursor-pointer"
+                  title="Open and edit in workspace editor"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Open in Editor</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={this.handleCopy}
